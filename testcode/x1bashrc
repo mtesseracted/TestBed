@@ -28,9 +28,10 @@ get_PS1(){
     local stat="$?" #get last exits status
     #set exit status color
     if [ $stat = 0 ]; then
-	stat="${X1_SCOLB}0${X1_ECOL}"
+	#stat="${X1_SCOLB}0${X1_ECOL}"
+        stat=""
     else
-	stat="${X1_SCOLR}${stat}${X1_ECOL}"
+	stat="$X1_SCOLB|$ECOL${X1_SCOLR}${stat}${X1_ECOL}"
     fi
 
     #get the pwd split into dirs
@@ -114,7 +115,7 @@ get_PS1(){
     fi
     local gcol="$X1_SCOLG:$X1_ECOL"
 
-    PS1="$X1_SCOLG0\u@$X1_ECOL$host$gcol$X1_SCOLG0\A$X1_ECOL$gcol$X1_SCOLB$dispdir|$X1_ECOL$stat${X1_SCOLB})$X1_ECOL "
+    PS1="$X1_SCOLG0\u@$X1_ECOL$host$gcol$X1_SCOLG0\A$X1_ECOL$gcol$X1_SCOLB$dispdir$X1_ECOL$stat\$ "
 }
 PROMPT_COMMAND=get_PS1
 
