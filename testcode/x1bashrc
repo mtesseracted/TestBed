@@ -7,7 +7,7 @@
 #   abbreviates the dir names to be shorter
 #   the longer the total path is
 # print the last exit status at the end    
-tput colors &>/dev/null
+tput colors &>/dev/null #check for colors first
 if [ $? -eq 0 ]; then
     X1_SCOLG="\[\e[1;32m\]" #green
     X1_SCOLG0="\[\e[0;32m\]" #green unbold
@@ -23,7 +23,6 @@ else
     X1_SCOLR=""
     X1_ECOL=""
 fi
-
 get_PS1(){
     local stat="$?" #get last exits status
     #set exit status color
@@ -31,7 +30,7 @@ get_PS1(){
 	#stat="${X1_SCOLB}0${X1_ECOL}"
         stat=""
     else
-	stat="$X1_SCOLB|$ECOL${X1_SCOLR}${stat}${X1_ECOL}"
+	stat="${X1_SCOLR}${stat}${X1_ECOL}"
     fi
 
     #get the pwd split into dirs
@@ -113,9 +112,13 @@ get_PS1(){
     else
 	local host="$X1_SCOLG0\h$X1_ECOL"
     fi
-    local gcol="$X1_SCOLG:$X1_ECOL"
 
-    PS1="$X1_SCOLG0\u@$X1_ECOL$host$gcol$X1_SCOLG0\A$X1_ECOL$gcol$X1_SCOLB$dispdir$X1_ECOL$stat\$ "
+    local gcol="$X1_SCOLG:$X1_ECOL" #green colon
+    local user="$X1_SCOLG0\u@$X1_ECOL"
+    local time="$X1_SCOLG0\A$X1_ECOL"
+    dispdir="$X1_SCOLB$dispdir$X1_ECOL"
+    PS1="$user$host$gcol$time$gcol$dispdir\$$stat> "
+    #PS1="$X1_SCOLG0\u@$X1_ECOL$host$gcol$X1_SCOLG0\A$X1_ECOL$gcol$X1_SCOLB$dispdir$X1_ECOL$stat\$ "
 }
 PROMPT_COMMAND=get_PS1
 
