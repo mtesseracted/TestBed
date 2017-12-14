@@ -1,0 +1,125 @@
+
+#PS1 setting function, features:
+# print in color if available
+# first print user@host:time
+#   highlight host color if SSH session
+# print abbreviated path that dynamically
+#   abbreviates the dir names to be shorter
+#   the longer the total path is
+# print the last exit status at the end    
+tput colors &>/dev/null
+if [ $? -eq 0 ]; then
+    X1_SCOLG="\[\e[1;32m\]" #green
+    X1_SCOLG0="\[\e[0;32m\]" #green unbold
+    X1_SCOLC="\[\e[1;36m\]" #cyan
+    X1_SCOLB="\[\e[1;34m\]" #blue
+    X1_SCOLR="\[\e[1;31m\]" #red
+    X1_ECOL="\[\e[00m\]" #end colors
+else
+    X1_SCOLG=""
+    X1_SCOLG0=""
+    X1_SCOLC=""
+    X1_SCOLB=""
+    X1_SCOLR=""
+    X1_ECOL=""
+fi
+
+get_PS1(){
+    local stat="$?" #get last exits status
+    #set exit status color
+    if [ $stat = 0 ]; then
+	stat="${X1_SCOLB}0${X1_ECOL}"
+    else
+	stat="${X1_SCOLR}${stat}${X1_ECOL}"
+    fi
+
+    #get the pwd split into dirs
+    IFS="/" read -ra PARTS <<< "$(pwd)"
+    local plast="${#PARTS[@]}"
+    plast=$(($plast-1))
+
+    #get the home dir and check if the
+    #beginning of pwd matches
+    IFS="/" read -ra hpath <<< "$HOME"
+    local j=0
+    local same=0
+    for i in "${hpath[@]}"; do
+	if [ "$i" != "${PARTS[$j]}" ]; then 
+	    same=1
+	fi
+	j=$(( $j+1 ))
+    done
+    if [ $same = 0 ]; then
+	#if we are in a sub-dir of $HOME
+	#then shorten to cut off from pwd
+	unset "hpath[${#hpath[@]}-1]"
+	j=1
+	for i in "${hpath[@]}"; do
+	    #this shrinks parts but leaves the first
+	    #element which is a space
+	    unset "PARTS[$j]"
+	    j=$(($j+1))
+	done
+    fi
+
+    #Now get the current dir and shrink pwd
+    if [ ${#PARTS[@]} -gt 1 ]; then
+	local cdir="${PARTS[-1]}"
+	unset "PARTS[$plast]"
+    else
+	#we're in the home or root dir
+	local cdir=""
+	PARTS=""
+    fi
+
+    #dynamically set how much to abbreviate
+    #the dir names
+    local lenmax=3
+    local plen=$(($lenmax*$plast +${#cdir}))
+    if [ $plen -gt 20 ]; then
+	lenmax=$(($lenmax -1))
+	plen=$(($lenmax*$plast +${#cdir}))
+	if [ $plen -gt 30 ]; then
+	    lenmax=$(($lenmax -1))
+	fi
+    fi
+
+    #now set the directory to display in PS1
+    local dispdir=""
+    for i in "${PARTS[@]}"; do
+	if [ "$i" == "" ]; then
+	    #from read we start with an empty element
+	    if [ $same = 0 ]; then
+		#we're in a sub-dir of HOME
+		i="~"
+		dispdir="${dispdir}$i"
+	    fi
+	else
+	    if [ "${#i}" -gt $lenmax ]; then
+		i=${i::$lenmax}
+	    fi
+	    dispdir="${dispdir}/$i"
+	fi
+    done
+    #append the cdir if we aren't in HOME
+    if [ "$cdir" != "" ]; then
+	dispdir="$dispdir/$cdir"
+    fi
+
+    #check if we're in an ssh session
+    if [ -n "$SSH_CLIENT" ]; then
+	local host="$X1_SCOLG\H$X1_ECOL"
+    else
+	local host="$X1_SCOLG0\h$X1_ECOL"
+    fi
+    local gcol="$X1_SCOLG:$X1_ECOL"
+
+    PS1="$X1_SCOLG0\u@$X1_ECOL$host$gcol$X1_SCOLG0\A$X1_ECOL$gcol$X1_SCOLB$dispdir|$X1_ECOL$stat${X1_SCOLB})$X1_ECOL "
+}
+PROMPT_COMMAND=get_PS1
+
+#alias bcl="bc -l"
+#alias les="less -iS"
+#alias xo="xdg-open"
+#alias p3="python3"
+

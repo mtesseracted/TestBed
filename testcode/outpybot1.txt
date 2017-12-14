@@ -1,0 +1,58 @@
+<HTML><HEAD>
+<TITLE>NIST XCOM: Element/Compound/Mixture</TITLE>
+<script language="JavaScript" id="_fed_an_js_tag" src="/js/federated-analytics.all.min.js?agency=NIST&subagency=pml&pua=UA-37115410-46&yt=true"></script>
+</HEAD>
+
+<BODY bgcolor="#FFFFFF" Text="#000000">
+
+<DIV ALIGN="center">
+<table width="100%" cellspacing="0" cellpadding="0" border="0">
+<tr>
+<td align="left"><img src="/Images/But/nist-pl-black.gif" width="136" 
+height="68" usemap="#NIST-PL" alt="NIST Physical Measurement Laboratory" border="0"></td>
+<td align="center"><A href="../Text/XCOM.html"><img src="../Text/XCOM-sm.jpg" 
+BORDER="0" ALT="XCOM Photon Cross Sections Database" WIDTH="300" 
+HEIGHT="94"></A></td>
+<td align="right"><img src="/Images/space.gif" width="136" height="68" alt=""></td>
+</tr></table><br clear="all">
+<map name="NIST-PL">
+    <area shape="rect" coords="0,0,1,1" href="#start" alt="[skip navigation]">
+    <area shape="rect" coords="1,1,135,48" href="http://www.nist.gov" 
+    alt="National Institute of Standards and Technology">
+    <area shape="rect" coords="1,50,135,67" href="/" alt="NIST Physical Measurement Laboratory">
+</map>
+<A name="start"><!-- filler --></A>
+</DIV>
+
+<H3>Element/Compound/Mixture Selection</H3>
+
+In this database, it is possible to obtain photon cross section data for a 
+single element, compound, or mixture (a combination of elements and compounds).
+
+<P>
+<A href="/PhysRefData/Xcom/Text/chap4.html">Help</A>
+
+<HR SIZE="1" NOSHADE>
+
+<BLOCKQUOTE><BLOCKQUOTE>
+<form method="POST" action="/cgi-bin/Xcom/xcom2-t">
+
+<H4>Identify material by:</H4>
+
+<BLOCKQUOTE>
+<input type="radio" checked name="Method" value="Elem"> Element<br>
+<input type="radio" name="Method" value="Comp"> Compound<br>
+<input type="radio" name="Method" value="Mix"> Mixture
+</BLOCKQUOTE>
+
+<input type="submit" value="Submit Information">
+<input type="reset" value="Reset">
+</form></BLOCKQUOTE></BLOCKQUOTE>
+
+<HR SIZE="1" NOSHADE>
+
+<A href="../Text/XCOM.html"><img src="../Text/XCOMsm.jpg" BORDER="0"
+WIDTH="130" HEIGHT="50" ALT="XCOM Photon Cross Sections Database homepage"></A>
+
+</BODY>
+</HTML>
