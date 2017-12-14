@@ -113,12 +113,11 @@ get_PS1(){
 	local host="$X1_SCOLG0\h$X1_ECOL"
     fi
 
-    local gcol="$X1_SCOLG:$X1_ECOL" #green colon
+    local gsep="$X1_SCOLG0|$X1_ECOL" #green vert
     local user="$X1_SCOLG0\u@$X1_ECOL"
     local time="$X1_SCOLG0\A$X1_ECOL"
     dispdir="$X1_SCOLB$dispdir$X1_ECOL"
-    PS1="$user$host$gcol$time$gcol$dispdir\$$stat> "
-    #PS1="$X1_SCOLG0\u@$X1_ECOL$host$gcol$X1_SCOLG0\A$X1_ECOL$gcol$X1_SCOLB$dispdir$X1_ECOL$stat\$ "
+    PS1="$user$host$gsep$time$gsep$dispdir\$$stat> "
 }
 PROMPT_COMMAND=get_PS1
 
