@@ -108,7 +108,7 @@ get_PS1(){
 
     #check if we're in an ssh session
     if [ -n "$SSH_CLIENT" ]; then
-	local host="$X1_SCOLG\H$X1_ECOL"
+	local host="$X1_SCOLG\h$X1_ECOL"
     else
 	local host="$X1_SCOLG0\h$X1_ECOL"
     fi
