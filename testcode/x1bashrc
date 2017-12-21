@@ -1,4 +1,3 @@
-
 #PS1 setting function, features:
 # print in color if available
 # first print user@host:time
@@ -23,6 +22,7 @@ else
     X1_SCOLR=""
     X1_ECOL=""
 fi
+
 get_PS1(){
     local stat="$?" #get last exits status
     #set exit status color
@@ -34,29 +34,37 @@ get_PS1(){
     fi
 
     #get the pwd split into dirs
-    IFS="/" read -ra PARTS <<< "$(pwd)"
+    IFS="/"
+    local PARTS=()
+    read -ra PARTS <<< "$(pwd)" 
     local plast="${#PARTS[@]}"
     plast=$(($plast-1))
 
     #get the home dir and check if the
     #beginning of pwd matches
-    IFS="/" read -ra hpath <<< "$HOME"
+    local HPATH=()
+    read -ra HPATH <<< "$HOME"
+
     local j=0
     local same=0
-    for i in "${hpath[@]}"; do
-	if [ "$i" != "${PARTS[$j]}" ]; then 
-	    same=1
-	fi
-	j=$(( $j+1 ))
-    done
+    if [ "${#HPATH[@]}" -gt 0 ]; then
+	for i in "${HPATH[@]}"; do
+	    if [ "$i" != "${PARTS[$j]}" ]; then 
+		same=1
+	    fi
+	    j=$(( $j+1 ))
+	done
+    else
+	same=1
+    fi
     if [ $same = 0 ]; then
 	#if we are in a sub-dir of $HOME
 	#then shorten to cut off from pwd
-	unset "hpath[${#hpath[@]}-1]"
+	unset "HPATH[${#HPATH[@]}-1]"
 	j=1
-	for i in "${hpath[@]}"; do
-	    #this shrinks parts but leaves the first
-	    #element which is a space
+	for i in "${HPATH[@]}"; do
+	    #this shrinks parts but leaves the
+	    #first element which is a space
 	    unset "PARTS[$j]"
 	    j=$(($j+1))
 	done
@@ -64,7 +72,8 @@ get_PS1(){
 
     #Now get the current dir and shrink pwd
     if [ ${#PARTS[@]} -gt 1 ]; then
-	local cdir="${PARTS[-1]}"
+	#local cdir="${PARTS[-1]}"
+	local cdir="${PARTS[$plast]}"
 	unset "PARTS[$plast]"
     else
 	#we're in the home or root dir
@@ -72,11 +81,10 @@ get_PS1(){
 	PARTS=""
     fi
 
-    #dynamically set how much to abbreviate
-    #the dir names
+    #set how much to abbreviate dir names
     local lenmax=3
     local plen=$(($lenmax*$plast +${#cdir}))
-    if [ $plen -gt 20 ]; then
+    if [ $plen -gt 24 ]; then
 	lenmax=$(($lenmax -1))
 	plen=$(($lenmax*$plast +${#cdir}))
 	if [ $plen -gt 30 ]; then
@@ -88,7 +96,7 @@ get_PS1(){
     local dispdir=""
     for i in "${PARTS[@]}"; do
 	if [ "$i" == "" ]; then
-	    #from read we start with an empty element
+	    #PARTS[0] == "" from read
 	    if [ $same = 0 ]; then
 		#we're in a sub-dir of HOME
 		i="~"
@@ -120,9 +128,4 @@ get_PS1(){
     PS1="$user$host$gsep$time$gsep$dispdir\$$stat> "
 }
 PROMPT_COMMAND=get_PS1
-
-#alias bcl="bc -l"
-#alias les="less -iS"
-#alias xo="xdg-open"
-#alias p3="python3"
 
