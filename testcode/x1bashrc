@@ -22,7 +22,6 @@ else
     X1_SCOLR=""
     X1_ECOL=""
 fi
-X1_IFS="$IFS"
 
 get_PS1(){
     local stat="$?" #get last exits status
@@ -35,7 +34,7 @@ get_PS1(){
     fi
 
     #get the pwd split into dirs
-    IFS="/"
+    local IFS="/"
     local PARTS=()
     read -ra PARTS <<< "$(pwd)" 
     local plast="${#PARTS[@]}"
@@ -45,7 +44,6 @@ get_PS1(){
     #beginning of pwd matches
     local HPATH=()
     read -ra HPATH <<< "$HOME"
-    IFS="$X1_IFS"
 
     local j=0
     local same=0
