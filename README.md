@@ -9,4 +9,4 @@ Test bed for Python
    path that dynamically abbreviates the dir names to be shorter, the 
    longer the total path is, print the last exit status at the end 
    
- ![x1PS1](https://i.imgur.com/APQMkxy.png)
+ ![x1PS1](https://i.imgur.com/APQMkxy.png?1)
