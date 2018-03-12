@@ -7,6 +7,6 @@ Test bed for Python
  - my bash PS1, features: print in color if available, first print
    user@host:time, highlight host color if SSH session, print abbreviated
    path that dynamically abbreviates the dir names to be shorter, the 
-   longer the total path is, print the last exit status at the end 
+   longer the total path is, print the last non-zero exit status at the end 
    
  ![x1PS1](https://i.imgur.com/APQMkxy.png?1)
