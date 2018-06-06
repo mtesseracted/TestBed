@@ -15,6 +15,7 @@ tput colors &>/dev/null #check for colors first
 if [ $? -eq 0 ]; then
     X1_SCOLG='\[\e[1;32m\]' #green
     X1_SCOLG0='\[\e[0;32m\]' #green unbold
+    X1_SCOLY='\[\e[0;33m\]' #yellow
     X1_SCOLC='\[\e[1;36m\]' #cyan
     X1_SCOLB='\[\e[1;34m\]' #blue
     X1_SCOLR='\[\e[1;31m\]' #red
@@ -45,15 +46,24 @@ X1FormTime(){ #Convert sec to min sec for display
     local sec=$(($1 - ($min * 60) ))
     sec=$(printf '%02d' $sec)
     if [ "$min" = "0" ]; then
-        echo "${sec}s"
-    else
-	echo "${min}m${sec}s"
+	echo "$X1_SCOLG0${min}m${sec}s$X1_ECOL" #mins = 0, green
+    else 
+	echo "$X1_SCOLY${min}m${sec}s$X1_ECOL" #mins != 0, yellow
     fi
 }
 
 get_PS1() {
+# Idea for git branch inclusion: replace user@host if we're on a git
+#   branch, or maybe just user since host tells us if we're ssh'ing
 
-    local x1time="\A" #Displayed time variable
+    local stat="$?" #get last exits status
+    if [ $stat = 0 ]; then #set exit status color
+        stat=""
+    else
+	stat="${X1_SCOLR}${stat}${X1_ECOL}"
+    fi
+
+    local x1time="$X1_SCOLG0\A$X1_ECOL" #Displayed time, default green clock
     if [ -z "$X1_TMING" ]; then
         #check against last prompt first (only 1 subshell call)
         #and for empty command (also 1 subshell call)
@@ -64,17 +74,10 @@ get_PS1() {
 	    local x1tmp=$(history 1 |cut -f4 -d' ') #actual
 	    if [ $(($X1_CMDTIME - $x1tmp)) -gt $X1_DELAY ]; then
 		x1tmp=$(($X1_CMDTIME - $x1tmp))
-		x1time=$(X1FormTime $x1tmp)
+		x1time="$(X1FormTime $x1tmp)" #color time-dependent
         fi; fi
         X1_CMDTIME=$(date +%s)                #reset prompt timer
         X1_CMDCNT=$(history 1 |cut -f2 -d' ') #reset cmd counter
-    fi
-
-    local stat="$?" #get last exits status
-    if [ $stat = 0 ]; then #set exit status color
-        stat=""
-    else
-	stat="${X1_SCOLR}${stat}${X1_ECOL}"
     fi
 
     #get the pwd split into dirs
@@ -167,7 +170,6 @@ get_PS1() {
 
     local gsep="$X1_SCOLG0|$X1_ECOL" #green vert
     local user="$X1_SCOLG0\u@$X1_ECOL" #green user
-    x1time="$X1_SCOLG0$x1time$X1_ECOL" #green time
     local dispdir="$X1_SCOLB$dispdir$X1_ECOL" #blue pwd
     PS1="$user$host$gsep$x1time$gsep$dispdir\$$stat> "
     #echo "$user$host$gsep$time$gsep$dispdir\$$stat> "
