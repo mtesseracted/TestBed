@@ -33,6 +33,7 @@ if [ -z "$HISTTIMEFORMAT" ] || [ "$HISTTIMEFORMAT" = '%s ' ]; then
     HISTTIMEFORMAT='%s '
     X1_CMDTIME=$(date +%s)
     X1_DELAY='30'
+    X1_CMDCNT=$(history 1 |cut -f2 -d' ')
 else
     #Already set, don't overwrite
     echo 'No X1PS1 timing info, HISTTIMEFORMAT already set'
@@ -43,7 +44,11 @@ X1FormTime(){ #Convert sec to min sec for display
     local min=$(($1 / 60))
     local sec=$(($1 - ($min * 60) ))
     sec=$(printf '%02d' $sec)
-    echo "${min}m${sec}s"
+    if [ "$min" = "0" ]; then
+        echo "${sec}s"
+    else
+	echo "${min}m${sec}s"
+    fi
 }
 
 get_PS1() {
@@ -51,13 +56,19 @@ get_PS1() {
     local x1time="\A" #Displayed time variable
     if [ -z "$X1_TMING" ]; then
         #check against last prompt first (only 1 subshell call)
-        if [ $(($(date +%s) - $X1_CMDTIME)) -gt $X1_DELAY ]; then
+        #and for empty command (also 1 subshell call)
+        if [ $(($(date +%s) - $X1_CMDTIME)) -gt $X1_DELAY ] && \
+           [ "$(history 1 |cut -f2 -d' ')" != "$X1_CMDCNT" ]; then
+
 	    X1_CMDTIME=$(date +%s)
 	    local x1tmp=$(history 1 |cut -f4 -d' ') #actual
 	    if [ $(($X1_CMDTIME - $x1tmp)) -gt $X1_DELAY ]; then
 		x1tmp=$(($X1_CMDTIME - $x1tmp))
 		x1time=$(X1FormTime $x1tmp)
-    fi; fi; fi
+        fi; fi
+        X1_CMDTIME=$(date +%s)                #reset prompt timer
+        X1_CMDCNT=$(history 1 |cut -f2 -d' ') #reset cmd counter
+    fi
 
     local stat="$?" #get last exits status
     if [ $stat = 0 ]; then #set exit status color
@@ -159,7 +170,6 @@ get_PS1() {
     x1time="$X1_SCOLG0$x1time$X1_ECOL" #green time
     local dispdir="$X1_SCOLB$dispdir$X1_ECOL" #blue pwd
     PS1="$user$host$gsep$x1time$gsep$dispdir\$$stat> "
-    X1_CMDTIME=$(date +%s) #reset timer
     #echo "$user$host$gsep$time$gsep$dispdir\$$stat> "
 }
 PROMPT_COMMAND=get_PS1
