@@ -1,33 +1,66 @@
-#PS1 setting function, features:
+# PS1 setting function, features:
 # print in color if available
-# first print user@host:time
+# first print user@host:time/cmd time
 #   highlight host color if SSH session
 # print abbreviated path that dynamically
 #   abbreviates the dir names to be shorter
 #   the longer the total path is
 # print the last exit status at the end    
+
+#  UPDATE: print last cmd time if >X1_DELAY
+##  This may overwrite defined history settings!!
+##  Untested in tmux
+
 tput colors &>/dev/null #check for colors first
 if [ $? -eq 0 ]; then
-    X1_SCOLG="\[\e[1;32m\]" #green
-    X1_SCOLG0="\[\e[0;32m\]" #green unbold
-    X1_SCOLC="\[\e[1;36m\]" #cyan
-    X1_SCOLB="\[\e[1;34m\]" #blue
-    X1_SCOLR="\[\e[1;31m\]" #red
-    X1_ECOL="\[\e[00m\]" #end colors
+    X1_SCOLG='\[\e[1;32m\]' #green
+    X1_SCOLG0='\[\e[0;32m\]' #green unbold
+    X1_SCOLC='\[\e[1;36m\]' #cyan
+    X1_SCOLB='\[\e[1;34m\]' #blue
+    X1_SCOLR='\[\e[1;31m\]' #red
+    X1_ECOL='\[\e[00m\]' #end colors
 else
-    X1_SCOLG=""
-    X1_SCOLG0=""
-    X1_SCOLC=""
-    X1_SCOLB=""
-    X1_SCOLR=""
-    X1_ECOL=""
+    X1_SCOLG=''
+    X1_SCOLG0=''
+    X1_SCOLC=''
+    X1_SCOLB=''
+    X1_SCOLR=''
+    X1_ECOL=''
 fi
 
-get_PS1(){
+if [ -z "$HISTTIMEFORMAT" ] || [ "$HISTTIMEFORMAT" = '%s ' ]; then
+    HISTCONTROL=''
+    HISTTIMEFORMAT='%s '
+    X1_CMDTIME=$(date +%s)
+    X1_DELAY='30'
+else
+    #Already set, don't overwrite
+    echo 'No X1PS1 timing info, HISTTIMEFORMAT already set'
+    X1_TIMING='false'
+fi
+ 
+X1FormTime(){ #Convert sec to min sec for display
+    local min=$(($1 / 60))
+    local sec=$(($1 - ($min * 60) ))
+    sec=$(printf '%02d' $sec)
+    echo "${min}m${sec}s"
+}
+
+get_PS1() {
+
+    local x1time="\A" #Displayed time variable
+    if [ -z "$X1_TMING" ]; then
+        #check against last prompt first (only 1 subshell call)
+        if [ $(($(date +%s) - $X1_CMDTIME)) -gt $X1_DELAY ]; then
+	    X1_CMDTIME=$(date +%s)
+	    local x1tmp=$(history 1 |cut -f4 -d' ') #actual
+	    if [ $(($X1_CMDTIME - $x1tmp)) -gt $X1_DELAY ]; then
+		x1tmp=$(($X1_CMDTIME - $x1tmp))
+		x1time=$(X1FormTime $x1tmp)
+    fi; fi; fi
+
     local stat="$?" #get last exits status
-    #set exit status color
-    if [ $stat = 0 ]; then
-	#stat="${X1_SCOLB}0${X1_ECOL}"
+    if [ $stat = 0 ]; then #set exit status color
         stat=""
     else
 	stat="${X1_SCOLR}${stat}${X1_ECOL}"
@@ -36,7 +69,7 @@ get_PS1(){
     #get the pwd split into dirs
     local IFS="/"
     local PARTS=()
-    read -ra PARTS <<< "$(pwd)" 
+    read -ra PARTS <<< "$PWD" 
     local plast="${#PARTS[@]}"
     plast=$(($plast-1))
 
@@ -52,7 +85,7 @@ get_PS1(){
 	    if [ "$i" != "${PARTS[$j]}" ]; then 
 		same=1
 	    fi
-	    j=$(( $j+1 ))
+	    j=$(($j + 1))
 	done
     else
 	same=1
@@ -116,16 +149,18 @@ get_PS1(){
 
     #check if we're in an ssh session
     if [ -n "$SSH_CLIENT" ]; then
-	local host="$X1_SCOLG\h$X1_ECOL"
+	local host="$X1_SCOLG\h$X1_ECOL" #bold
     else
 	local host="$X1_SCOLG0\h$X1_ECOL"
     fi
 
     local gsep="$X1_SCOLG0|$X1_ECOL" #green vert
-    local user="$X1_SCOLG0\u@$X1_ECOL"
-    local time="$X1_SCOLG0\A$X1_ECOL"
-    dispdir="$X1_SCOLB$dispdir$X1_ECOL"
-    PS1="$user$host$gsep$time$gsep$dispdir\$$stat> "
+    local user="$X1_SCOLG0\u@$X1_ECOL" #green user
+    x1time="$X1_SCOLG0$x1time$X1_ECOL" #green time
+    local dispdir="$X1_SCOLB$dispdir$X1_ECOL" #blue pwd
+    PS1="$user$host$gsep$x1time$gsep$dispdir\$$stat> "
+    X1_CMDTIME=$(date +%s) #reset timer
+    #echo "$user$host$gsep$time$gsep$dispdir\$$stat> "
 }
 PROMPT_COMMAND=get_PS1
 
