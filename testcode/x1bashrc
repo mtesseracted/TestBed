@@ -5,7 +5,7 @@
 X1_PRECNT=0         #command counter to know if cmd was blank (no increment)
 X1_CMDCNT=0
 X1_PRETIM=$SECONDS  #time tracker
-X1_DELAY='3'       #Min cmd time to print
+X1_DELAY='30'       #Min cmd time to print
 # X1_TIMING='false' #do a check first of bash version and notify-send
 # installed
 preexec_invoke() {
@@ -19,13 +19,14 @@ preexec_invoke() {
 trap 'preexec_invoke' DEBUG #trap DEBUG execs before every 'simple' command
 
 x1alert(){
-    case "$1" in "vi"*) ;;
+    #arg1 (int): 2 = persist, 1 = transient (only a popup)
+    #arg2 (str): command run
+    #arg3 (str): time of command
+    case "$2" in "vi"*) ;; #ignore vi 
 	*)
-	    #--hint=int:transient:1 # add and then isn't persistent
-	    # can maybe make 2 versions, really long ones will persist?
-	    notify-send --urgency=low \
+	    notify-send --hint=int:transient:$1 --urgency=low \
 	                -i "$([ $? = 0 ] && echo terminal || echo error)" \
-			 "$1 took $2"
+			 "$2 took $3"
 	;;
     esac
 }
@@ -70,15 +71,19 @@ X1FormTime(){ #Convert sec to [hr]+min+sec for display
 
     if [ "$hr" != "0" ]; then                              #hr > 0, red
 	printf -v X1_CMDTIME "%dh%02dm%02ds" $hr $min $sec
-	x1alert "$X1_PRECMD" "$X1_CMDTIME"
+	x1alert 2 "$X1_PRECMD" "$X1_CMDTIME" #persist until cleared
 	printf -v X1_CMDTIME "${X1_SCOLR}$X1_CMDTIME$X1_ECOL"
     elif [ "$min" != "0" ]; then                           #mins > 0, yellow
 	printf -v X1_CMDTIME "%dm%02ds" $min $sec
-	x1alert "$X1_PRECMD" "$X1_CMDTIME"
+	if [ "$min" -gt 10 ]; then
+	    x1alert 2 "$X1_PRECMD" "$X1_CMDTIME" #persist until cleared
+	else
+	    x1alert 1 "$X1_PRECMD" "$X1_CMDTIME" #don't persist
+	fi
 	printf -v X1_CMDTIME "${X1_SCOLY}$X1_CMDTIME$X1_ECOL"
     else                                                   #mins = 0, green
 	printf -v X1_CMDTIME "0m%02ds" $sec
-	x1alert "$X1_PRECMD" "$X1_CMDTIME"
+	#x1alert 1 "$X1_PRECMD" "$X1_CMDTIME"
 	printf -v X1_CMDTIME "${X1_SCOLG0}$X1_CMDTIME$X1_ECOL"
     fi
 }
