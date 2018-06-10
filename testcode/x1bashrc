@@ -1,210 +1,224 @@
-# Trap DEBUG to exec before commands, only in newer bash
-# this is unsupported in bash3, DEBUG trap execs after
-# https://superuser.com/questions/175799/does-bash-have-a-hook-that-is-run-before-executing-a-command
-#newer on github: https://github.com/rcaloras/bash-preexec
-X1_PRECNT=0         #command counter to know if cmd was blank (no increment)
-X1_CMDCNT=0
-X1_PRETIM=$SECONDS  #time tracker
-X1_DELAY='30'       #Min cmd time to print
-# X1_TIMING='false' #do a check first of bash version and notify-send
-# installed
-preexec_invoke() {
-    [ -n "$COMP_LINE" ] && return                     #ignore auto-complete
-    [ "$BASH_COMMAND" = "$PROMPT_COMMAND" ] && return #ignore PS1 func
-    X1_PRECMD=$BASH_COMMAND  #store command
-    ((X1_PRECNT++))          #increment counter, to know empty prompt
-    X1_PRETIM=$SECONDS       #store time of command
-    echo -e "\e]0;"; echo -n $BASH_COMMAND; echo -ne "\007" #set win title
-}
-trap 'preexec_invoke' DEBUG #trap DEBUG execs before every 'simple' command
+# PS1 setting script, features:
+## print in color if available
+## first print user@host (green):
+##   host color is bold if SSH session.
+## time (green) || cmd_time (green|yellow|red)):
+##   clock time or cmd_time (if cmd_time>30s).
+##   cmd_time colors: green(30-59s||any editor), 
+##   yellow(1-59m), red(>1hr). if cmd_time > 1min, GUI 
+##   alert sent, > 10min peristent alert.
+## path (blue):
+##   print abbreviated path that dynamically abbreviates 
+##   the dir names to be shorter the longer the total path.
+## exit status (red): 
+##   print the last exit status at the end if != 0.
 
-x1alert(){
-    #arg1 (int): 2 = persist, 1 = transient (only a popup)
-    #arg2 (str): command run
-    #arg3 (str): time of command
-    case "$2" in "vi"*) ;; #ignore vi 
-	*)
-	    notify-send --hint=int:transient:$1 --urgency=low \
-	                -i "$([ $? = 0 ] && echo terminal || echo error)" \
-			 "$2 took $3"
-	;;
-    esac
-}
+# Non-PS1 features:
+## Set window title to last cmd
 
-# PS1 setting function, features:
-# print in color if available
-# first print user@host:time/cmd time
-#   highlight host color if SSH session
-# print abbreviated path that dynamically
-#   abbreviates the dir names to be shorter
-#   the longer the total path is
-# print the last exit status at the end    
+# bug?: if last command printed cmd_time then when doing an 
+#   autocomplete where it lists options, the prompt 
+#   displays the previous cmd time. 
+# reason: This is because PS1 isn't redrawn! beyond the 
+#   scope of this script to fix.
 
-#  UPDATE: print last cmd time if >X1_DELAY
-##  This may overwrite defined history settings!!
-##  Untested in tmux
+X1_PRECNT=0         # counter to see if cmd was blank 
+X1_CMDCNT=0         # previous count
+X1_PRETIM=$SECONDS  # time tracker
+X1_DELAY='3'       # Minimum cmd time (in secs) to print
+X1_ALERTS=''        # set to false to turn off alerts
 
-tput colors &>/dev/null #check for colors first
-if [ $? -eq 0 ]; then
-    X1_SCOLG='\[\e[1;32m\]' #green
-    X1_SCOLG0='\[\e[0;32m\]' #green unbold
-    X1_SCOLY='\[\e[0;33m\]' #yellow
-    X1_SCOLC='\[\e[1;36m\]' #cyan
-    X1_SCOLB='\[\e[1;34m\]' #blue
-    X1_SCOLR='\[\e[1;31m\]' #red
-    X1_ECOL='\[\e[00m\]' #end colors
+if [ "$BASH_VERSINFO" -lt 4 ]; then
+    X1_TIMING='false' # do a check of bash version
+    # timing could be supported in earlier versions but 
+    # would probably need subshells for pattern matching
 else
-    X1_SCOLG=''
-    X1_SCOLG0=''
-    X1_SCOLC=''
-    X1_SCOLB=''
-    X1_SCOLR=''
-    X1_ECOL=''
+    notify-send &>/dev/null  # check for GUI alerts
+    if [ $? -eq 127 ]; then
+	X1_ALERTS='false'
+    fi
+
+    shopt -s extglob         # for pattern matching
+
+    x1_preexec() {
+	# command to run before every 'simple' command, tracks cmd stats
+
+	[ "$BASH_COMMAND" = "$PROMPT_COMMAND" ] && return # ignore PS1 func
+	[ -n "$COMP_LINE" ] && return                # ignore auto-complete
+
+	X1_PRECMD=$BASH_COMMAND  # store command
+	((X1_PRECNT++))          # increment counter, tracks empty prompt
+	X1_PRETIM=$SECONDS       # store time of command
+	echo -e "\e]0;"; echo -n $BASH_COMMAND; echo -ne "\007" #set win title
+    }
+    # Trap DEBUG to exec before 'simple' commands, only in newer bash
+    # this is unsupported in bash3.x?, DEBUG trap execs after
+    trap 'x1_preexec' DEBUG # $> help trap; # for more info
 fi
 
- 
-X1FormTime(){ #Convert sec to [hr]+min+sec for display
-    #This can be called w/o subshell if use printf -v
-    local hr=$(( $1/3600 ))
-    local min=$(( ($1/60) - ($hr*3600) ))
-    local sec=$(( $1 - ($min*60) ))
+tput colors &>/dev/null      # check for colors 
+if [ $? -eq 0 ]; then
+    X1_COLG='\[\e[1;32m\]'   # green
+    X1_COLG0='\[\e[0;32m\]'  # green unbold
+    X1_COLY='\[\e[0;33m\]'   # yellow
+    X1_COLC='\[\e[1;36m\]'   # cyan
+    X1_COLB='\[\e[1;34m\]'   # blue
+    X1_COLR='\[\e[1;31m\]'   # red
+    X1_ECOL='\[\e[00m\]'     # end color
+else
+    X1_COLG=''; X1_COLG0=''
+    X1_COLC=''; X1_COLB=''
+    X1_COLR=''; X1_ECOL=''
+    X1_COLY=''
+fi
 
-    if [ "$hr" != "0" ]; then                              #hr > 0, red
-	printf -v X1_CMDTIME "%dh%02dm%02ds" $hr $min $sec
-	x1alert 2 "$X1_PRECMD" "$X1_CMDTIME" #persist until cleared
-	printf -v X1_CMDTIME "${X1_SCOLR}$X1_CMDTIME$X1_ECOL"
-    elif [ "$min" != "0" ]; then                           #mins > 0, yellow
-	printf -v X1_CMDTIME "%dm%02ds" $min $sec
-	if [ "$min" -gt 10 ]; then
-	    x1alert 2 "$X1_PRECMD" "$X1_CMDTIME" #persist until cleared
-	else
-	    x1alert 1 "$X1_PRECMD" "$X1_CMDTIME" #don't persist
-	fi
-	printf -v X1_CMDTIME "${X1_SCOLY}$X1_CMDTIME$X1_ECOL"
-    else                                                   #mins = 0, green
-	printf -v X1_CMDTIME "0m%02ds" $sec
-	#x1alert 1 "$X1_PRECMD" "$X1_CMDTIME"
-	printf -v X1_CMDTIME "${X1_SCOLG0}$X1_CMDTIME$X1_ECOL"
+x1_formTime(){ 
+    # Convert sec to hr+min or min+sec for display
+    # Sends GUI alert if time > 1min but not for most editors
+    # alert is persistant (must be cleared) if time > 10 min
+    # alert is transient (cleared after fades) for < 10 min
+    #
+    # @parameters
+    # arg1 (int): seconds to convert
+    #
+    # @returns
+    # X1_CMDTIME (str): stores output in this global
+    #   green for editors and < 1 min
+    #   yellow for 1-59 min
+    #   red for > 1 hour
+
+    local min=$(( ($1/60) ))
+    local sec=$(( $1 - ($min*60) ))
+    local x1col="$X1_COLG0"             # green default
+    local x1alertlvl=0                  # alert off default
+    printf -v X1_CMDTIME "%dm%02ds" $min $sec
+
+    if [ $1 -gt 59 ] && [ $1 -lt 600 ]; then     # 1-10 min
+	x1col="$X1_COLY"
+	x1alertlvl=1
+    elif [ $1 -gt 599 ] && [ $1 -lt 3600 ]; then # 10-59 min
+	x1col="$X1_COLY"
+	x1alertlvl=2
+    elif [ $1 -gt 3599 ]; then                   # > 1 hour
+	x1alertlvl=2
+	x1col="$X1_COLR"
+
+	local hr=$(( $1/3600 ))
+	min=$(( ($1/60) - ($hr*60) ))
+	printf -v X1_CMDTIME "%dh%02dm" $hr $min
     fi
+
+    # send alert if needed and check for editor
+    if [ -z "$X1_ALERTS" ] && [ $x1alertlvl -gt 0 ]; then
+    case "$X1_PRECMD" in 
+	vi?(m)?( *)|nano?( *)|pico?( *)|gedit?( *)) # ignore editors
+	    x1col="$X1_COLG0"                       # + color them green
+	;;
+	*)
+	    notify-send --hint=int:transient:$x1alertlvl --urgency=low \
+	                -i "$([ $? = 0 ] && echo terminal || echo error)" \
+			 "$X1_PRECMD took $X1_CMDTIME"
+	;;
+    esac; fi
+
+    # store colored output in X1_CMDTIME
+    printf -v X1_CMDTIME "$x1col$X1_CMDTIME$X1_ECOL"
 }
 
-get_PS1() {
+x1_PWD() {
+    # dynamically abbreviate the pwd
+    #
+    # @params
+    # arg1 (str): path string, seperated by '/'
+    #
+    # @returns
+    # X1_DISPPWD (str): global var
+
+    [ "$1" = '/' ] && X1_DISPPWD='/' && return # root dir case
+    local IFS="/"      # local field seperator for paths
+    local PARTS=()     # pwd split into dirs
+    X1_DISPPWD=''
+
+    if [ -n "$HOME" ]; then # check if in HOME dir
+	[ "$1" = "$HOME" ] && X1_DISPPWD='~' && return
+	case "$1" in
+	    "$HOME"?(/*))
+		X1_DISPPWD='~'
+		read -ra PARTS <<< "${1/"$HOME"/}";;
+	    *)
+	      	read -ra PARTS <<< "${1}";;
+	esac
+    else
+	read -ra PARTS <<< "${1}"
+    fi
+
+    local plast=$((${#PARTS[@]} - 1))      # current dir index
+    [ -z "${PARTS[0]}" ] && unset PARTS[0] # unset blank from read
+
+    local cdir="${PARTS[$plast]}" 
+    unset PARTS[$plast]
+
+    local lenmax=3 # max dir name length of parent dirs
+    local plen=$(($lenmax*$plast + ${#cdir}))
+    if [ $plen -gt 24 ]; then #set how much to shorten dir names
+	lenmax=$(($lenmax - 1))
+	plen=$(($lenmax*$plast + ${#cdir}))
+	if [ $plen -gt 30 ]; then
+	    lenmax=$(($lenmax - 1))
+            if [ "${#cdir}" -gt 14 ]; then
+                cdir="${cdir::5}[~]${cdir:$((${#cdir}-5))}"
+    fi; fi; fi
+
+    #now set the directory to store in X1_DISPPWD
+    for i in "${PARTS[@]}"; do
+	if [ "${#i}" -gt $lenmax ]; then
+	    X1_DISPPWD="$X1_DISPPWD/${i::$lenmax}"
+	else
+	    X1_DISPPWD="${X1_DISPPWD}/$i"
+	fi
+    done
+    [ -n "$cdir" ] && X1_DISPPWD="$X1_DISPPWD/$cdir"
+}
+
+x1_get_PS1() {
 # Idea for git branch inclusion: replace user@host if we're on a git
 #   branch, or maybe just user since host tells us if we're ssh'ing
 #   or maybe dynamicly can replace host if git branch is really long
-#   can also omit time if not delayed
+#   can also omit time if not cmd_time
 
     local stat="$?"        # get last exits status
     if [ $stat = 0 ]; then # set exit status color
         stat=""
     else
-	stat="${X1_SCOLR}${stat}${X1_ECOL}"
+	stat="${X1_COLR}${stat}${X1_ECOL}"
     fi
 
-    local x1time="$X1_SCOLG0\A$X1_ECOL" #Displayed time, default green clock
+    local x1time="$X1_COLG0\A$X1_ECOL" #Displayed time, default green clock
     if [ -z "$X1_TMING" ]; then
         if [ $(($SECONDS - $X1_PRETIM)) -gt $X1_DELAY ] && \
            [ "$X1_PRECNT" != "$X1_CMDCNT" ]; then
 
-	    X1FormTime $(($SECONDS -$X1_PRETIM))
+	    x1_formTime $(($SECONDS -$X1_PRETIM))
 	    x1time=$X1_CMDTIME
-            X1_CMDCNT=$X1_PRECNT
-    fi; fi
-
-    #get the pwd split into dirs
-    local IFS="/"
-    local PARTS=()
-    read -ra PARTS <<< "$PWD" 
-    local plast="${#PARTS[@]}"
-    plast=$(($plast-1))
-
-    #get the home dir and check if the
-    #beginning of pwd matches
-    local HPATH=()
-    read -ra HPATH <<< "$HOME"
-
-    local j=0; local same=0
-    if [ "${#HPATH[@]}" -gt 0 ]; then
-	for i in "${HPATH[@]}"; do
-	    if [ "$i" != "${PARTS[$j]}" ]; then 
-		same=1
-	    fi
-	    j=$(($j + 1))
-	done
-    else
-	same=1
-    fi
-    if [ $same = 0 ]; then
-	#if we are in a sub-dir of $HOME
-	#then shorten to cut off from pwd
-	unset "HPATH[${#HPATH[@]}-1]"
-	j=1
-	for i in "${HPATH[@]}"; do
-	    #this shrinks parts but leaves the
-	    #first element which is a space
-	    unset "PARTS[$j]"
-	    j=$(($j+1))
-	done
-    fi
-
-    #Now get the current dir and shrink pwd
-    if [ ${#PARTS[@]} -gt 1 ]; then
-	#local cdir="${PARTS[-1]}"
-	local cdir="${PARTS[$plast]}"
-	unset "PARTS[$plast]"
-    else
-	#we're in the home or root dir
-	local cdir=""
-	PARTS=""
-    fi
-
-    #set how much to abbreviate dir names
-    local lenmax=3
-    local plen=$(($lenmax*$plast +${#cdir}))
-    if [ $plen -gt 24 ]; then
-	lenmax=$(($lenmax -1))
-	plen=$(($lenmax*$plast +${#cdir}))
-	if [ $plen -gt 30 ]; then
-	    lenmax=$(($lenmax -1))
-            if [ "${#cdir}" -gt 10 ]; then
-                cdir="${cdir::3}[~]${cdir:$((${#cdir}-5))}"
-                #cdir="${cdir::3}$X1_ECOL[~]$X1_SCOLB${cdir:$((${#cdir}-5))}"
-    fi; fi; fi
-
-    #now set the directory to display in PS1
-    local dispdir=""
-    for i in "${PARTS[@]}"; do
-	if [ "$i" == "" ]; then
-	    #PARTS[0] == "" from read
-	    if [ $same = 0 ]; then
-		#we're in a sub-dir of HOME
-		i="~"
-		dispdir="${dispdir}$i"
-	    fi
-	else
-	    if [ "${#i}" -gt $lenmax ]; then
-		i=${i::$lenmax}
-	    fi
-	    dispdir="${dispdir}/$i"
 	fi
-    done
-    #append the cdir if we aren't in HOME
-    if [ "$cdir" != "" ]; then
-	dispdir="$dispdir/$cdir"
+	X1_CMDCNT=$X1_PRECNT #update outside if[] for ctrl-c
     fi
+
+    X1_DISPPWD=''
+    x1_PWD "$PWD"
 
     #check if we're in an ssh session
     if [ -n "$SSH_CLIENT" ]; then
-	local host="$X1_SCOLG\h$X1_ECOL" #bold
+	local host="$X1_COLG\h$X1_ECOL" #bold
     else
-	local host="$X1_SCOLG0\h$X1_ECOL"
+	local host="$X1_COLG0\h$X1_ECOL"
     fi
 
-    local gsep="$X1_SCOLG0|$X1_ECOL" #green vert
-    local user="$X1_SCOLG0\u@$X1_ECOL" #green user
-    local dispdir="$X1_SCOLB$dispdir$X1_ECOL" #blue pwd
+    local gsep="$X1_COLG0|$X1_ECOL"             # green vert
+    local user="$X1_COLG0\u@$X1_ECOL"           # green user
+    local dispdir="$X1_COLB$X1_DISPPWD$X1_ECOL" # blue pwd
     PS1="$user$host$gsep$x1time$gsep$dispdir\$$stat> "
     #echo "$user$host$gsep$time$gsep$dispdir\$$stat> "
 }
-PROMPT_COMMAND=get_PS1
+PROMPT_COMMAND=x1_get_PS1
 

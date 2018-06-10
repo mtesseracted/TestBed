@@ -1,6 +1,7 @@
 #Vim shadows
 *~
 *.swp
+/testcode/ps1
 
 # Prerequisites
 *.d
