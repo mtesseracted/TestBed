@@ -15,6 +15,8 @@
 
 # Non-PS1 features:
 ## Set window title to last cmd
+## suggested LAST line in .bashrc to set the window title:
+#echo -ne "\e];fresh term\007" #set window title
 
 # bug?: if last command printed cmd_time then when doing an 
 #   autocomplete where it lists options, the prompt 
@@ -223,5 +225,3 @@ x1_get_PS1() {
 }
 PROMPT_COMMAND=x1_get_PS1
 
-# suggested LAST line in .bashrc to set the window title:
-#echo -ne "\e];fresh term\007" #set window title
