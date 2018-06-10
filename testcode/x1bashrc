@@ -1,8 +1,8 @@
 # PS1 setting script, features:
-## print in color if available
+## print in color (if available)
 ## first print user@host (green):
 ##   host color is bold if SSH session.
-## time (green) || cmd_time (green|yellow|red)):
+## time (green) || cmd_time (green|yellow|red):
 ##   clock time or cmd_time (if cmd_time>30s).
 ##   cmd_time colors: green(30-59s||any editor), 
 ##   yellow(1-59m), red(>1hr). if cmd_time > 1min, GUI 
@@ -25,14 +25,15 @@
 X1_PRECNT=0         # counter to see if cmd was blank 
 X1_CMDCNT=0         # previous count
 X1_PRETIM=$SECONDS  # time tracker
-X1_DELAY='3'       # Minimum cmd time (in secs) to print
+X1_DELAY='30'       # Minimum cmd time (in secs) to print
 X1_ALERTS=''        # set to false to turn off alerts
+X1_TIMING=''        # set to false to turn off timing
 
 if [ "$BASH_VERSINFO" -lt 4 ]; then
     X1_TIMING='false' # do a check of bash version
     # timing could be supported in earlier versions but 
     # would probably need subshells for pattern matching
-else
+elif [ -z "$X1_TIMING" ]; then
     notify-send &>/dev/null  # check for GUI alerts
     if [ $? -eq 127 ]; then
 	X1_ALERTS='false'
@@ -222,3 +223,5 @@ x1_get_PS1() {
 }
 PROMPT_COMMAND=x1_get_PS1
 
+# suggested LAST line in .bashrc to set the window title:
+#echo -ne "\e];fresh term\007" #set window title
