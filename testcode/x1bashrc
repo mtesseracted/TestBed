@@ -30,10 +30,10 @@ X1_PRETIM=$SECONDS  # time tracker
 X1_DELAY='30'       # Minimum cmd time (in secs) to print
 X1_TIMING=''        # set to false to turn off timing
 X1_ALERTS=''        # set to false to turn off timing alerts
+shopt -s extglob    # for pattern matching
 
 if [ -z "$X1_TIMING" ]; then
 
-    shopt -s extglob         # for pattern matching
     notify-send &>/dev/null  # check if GUI alerts installed
     if [ $? -eq 127 ]; then
 	X1_ALERTS='false'
