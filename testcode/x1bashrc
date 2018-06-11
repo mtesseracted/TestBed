@@ -4,7 +4,7 @@
 ##   host color is bold if SSH session.
 ## time (green) || cmd_time (green|yellow|red):
 ##   clock time or cmd_time (if cmd_time>30s).
-##   cmd_time colors: green(30-59s||any editor), 
+##   cmd_time colors: green(30-59s||any editor/ssh), 
 ##   yellow(1-59m), red(>1hr). if cmd_time > 1min, GUI 
 ##   alert sent, > 10min peristent alert.
 ## path (blue):
@@ -107,11 +107,12 @@ x1_formTime(){
 	printf -v X1_CMDTIME "%dh%02dm" $hr $min
     fi
 
-    # send alert if needed and check for editor
+    # send alert if needed and check for editor | ssh
     if [ -z "$X1_ALERTS" ] && [ $x1alertlvl -gt 0 ]; then
     case "$X1_PRECMD" in 
-	vi?(m)?( *)|nano?( *)|pico?( *)|gedit?( *)) # ignore editors
-	    x1col="$X1_COLG0"                       # + color them green
+	ssh?( *)|vi?(m)?( *)|nano?( *)|pico?( *)|gedit?( *))
+             # ignore editors + ssh
+	    x1col="$X1_COLG0"           # + color them green
 	;;
 	*)
 	    notify-send --hint=int:transient:$x1alertlvl --urgency=low \
