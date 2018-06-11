@@ -28,20 +28,16 @@ X1_PRECNT=0         # counter to see if cmd was blank
 X1_CMDCNT=0         # previous count
 X1_PRETIM=$SECONDS  # time tracker
 X1_DELAY='30'       # Minimum cmd time (in secs) to print
-X1_ALERTS=''        # set to false to turn off alerts
 X1_TIMING=''        # set to false to turn off timing
+X1_ALERTS=''        # set to false to turn off timing alerts
 
-if [ "$BASH_VERSINFO" -lt 4 ]; then
-    X1_TIMING='false' # do a check of bash version
-    # timing could be supported in earlier versions but 
-    # would probably need subshells for pattern matching
-elif [ -z "$X1_TIMING" ]; then
-    notify-send &>/dev/null  # check for GUI alerts
+if [ -z "$X1_TIMING" ]; then
+
+    shopt -s extglob         # for pattern matching
+    notify-send &>/dev/null  # check if GUI alerts installed
     if [ $? -eq 127 ]; then
 	X1_ALERTS='false'
     fi
-
-    shopt -s extglob         # for pattern matching
 
     x1_preexec() {
 	# command to run before every 'simple' command, tracks cmd stats
