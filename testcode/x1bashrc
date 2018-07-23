@@ -1,38 +1,35 @@
 #  PS1 setting script, features:
 
+#  Regular use: (opt1/opt2 means opt1 has precedence)
+##   user@host|cmd_time/clock|pwd$exit_code/''>
+
 ## print in color (if available)
-## Order of precedence to display: opt1/opt2 means opt1
-## has priority if present. '' means opt2 is nothing.
-
-#  Regular use:
-##   user@host|cmd_time/clock|pwd$exit/''>
-
 ## first print user@host (green):
 ##   host color is bold if SSH session.
 ## cmd_time (green|yellow|red) || clock (green):
-##   clock time or cmd_time (if cmd_time > 30s).
-##   cmd_time colors: green(30-59s||exemptions in 
+##   clock time or cmd_time (if cmd_time > 20s).
+##   cmd_time colors: green(20-59s||exemptions in 
 ##   x1_formTime), yellow(1-59m), red(>1hr). If 
 ##   cmd_time > 1min and on alert list in x1_formTime,
 ##   a GUI alert is sent, > 10min alert is peristent.
 ## path (blue):
 ##   print abbreviated path that dynamically abbreviates 
 ##   the dir names to be shorter the longer the total path.
-##   The pwd is shortened to only the current directory
-##   inside tmux.
+##   To adjust look in x1_PWD(). The pwd is shortened to 
+##   only the current directory inside tmux.
 ## exit status (red): 
 ##   print the last exit status at the end if != 0.
 
 #  Git & Conda environments:
 ## If a conda env is active or in a git repo then the
 ##   username is not displayed and the clock is turned off.
-##   cmd_time still appears if > 30s. The git repo is 
+##   cmd_time still appears if > 20s. The git repo is 
 ##   displayed after the host with the color in the 
 ##   following order of precedence: red for dirty, yellow 
 ##   for clean but untracked files present, cyan for clean
 ##   but ahead/behind of remote, green for clean.
 ##   The conda env is displaed where the user would be.
-##   (condaenv)@host(branchname)|cmd_time|/''pwd$exit/''>
+##   (conda_env)@host(git_branch)|cmd_time|/''pwd$exit/''>
 
 # Non-PS1 features:
 ## Set window title to last cmd
@@ -43,14 +40,15 @@ X1_PRECNT=0         # counter to see if cmd was blank
 X1_CMDCNT=0         # previous count
 X1_PRETIM=$SECONDS  # time tracker
 
+
 # User configurable settings, can set here to permanently
 # change settings, or can do `SETTING=false` after script is
 # sourced to turn off for just that shell (not for colors)
 X1_COLORS=true      # set to false to turn off colors
-X1_TIMING=true      # set to false to turn off cmd timing
-X1_DELAY='20'       # minimum cmd time (in secs) to print
 X1_GITSTAT=true     # whether to show git branch, useful
                     # to turn off when `git status` is slow
+X1_TIMING=true      # set to false to turn off cmd timing
+X1_DELAY='20'       # minimum cmd time (in secs) to print
 X1_ALERTS=true      # set false to turn off GUI time alerts
 X1_SSHALERT=false   # whether to try to send alerts over SSH
 X1_USER='unameHere' # username on client machine for remote
@@ -76,7 +74,6 @@ if $X1_TIMING; then
 	    echo "  did not have notify-send installed"
 	    X1_SSHALERT=false
 	else
-	#elif [ "$X1_SSHALERT" = '255' ]; then
 	    echo "Unable to establish keygen ssh connection"
 	    echo "with $X1_USER@$X1_CLIENTIP, GUI alerts diabled"
 	    X1_SSHALERT=false
@@ -112,14 +109,19 @@ if [ $? -eq 0 ] && $X1_COLORS; then
     X1_ECOL='\[\e[00m\]'     # end color
 fi
 
+
 x1_formTime(){ 
-    # Convert sec to hr+min or min+sec for display
-    # Sends GUI alert if time > 1min but not for the cmds in
-    # the 'case' section. List currently contains: 
-    #   vi(m), emacs, nano, pico, gedit, ssh, tmux, less
+    # Convert sec to hr+min or min+sec for color display
+
+    # Sends GUI alert if time > 1min and on the first
+    # list in the 'case' section below. 
     # alert is persistant (must be cleared) if time > 10 min
     # alert is transient (cleared after fades) for < 10 min
-    #
+    
+    # Some common interactive commands will always be
+    # green, such as editors, in the second list of the 
+    # 'case' section below.
+
     # @parameters
     # arg1 (int): seconds to convert
     #
@@ -144,10 +146,9 @@ x1_formTime(){
     elif [ $1 -gt 3599 ]; then                   # > 1 hour
 	x1alertlvl=2
 	x1col="$X1_COLR"
-
-	local hr=$(( $1/3600 ))
-	min=$(( ($1/60) - ($hr*60) ))
-	printf -v X1_CMDTIME "%dh%02dm" $hr $min
+	sec=$(( $1/3600 )) # repurpose sec to hours
+	min=$(( ($1/60) - ($sec*60) ))
+	printf -v X1_CMDTIME "%dh%02dm" $sec $min
     fi
 
     if $X1_ALERTS; then
@@ -186,6 +187,7 @@ x1_formTime(){
     # store colored output in X1_CMDTIME
     printf -v X1_CMDTIME "$x1col$X1_CMDTIME$X1_ECOL"
 }
+
 
 x1_PWD() {
     # dynamically abbreviate the pwd
@@ -242,8 +244,9 @@ x1_PWD() {
     [ -n "$cdir" ] && X1_DISPPWD="$X1_DISPPWD/$cdir"
 }
 
+
 x1_get_PS1() {
-    # Function that sets PS1
+    # Function that makes and sets PS1
 
     # Get last exit value + color
     local stat="$?"
@@ -265,7 +268,6 @@ x1_get_PS1() {
 	fi
 	X1_CMDCNT=$X1_PRECNT #update outside if[] for ctrl-c
     fi
-
 
     # Check git status (porcelain), show branch & top level untracked
     if $X1_GITSTAT; then
@@ -297,14 +299,14 @@ x1_get_PS1() {
     [ -n "$CONDA_PREFIX" ] && condaenv="(${CONDA_PREFIX##*/})"
 
     # Only use current working dir if in tmux
-    [ -z "$TMUX" ] && x1_PWD "$PWD" || 	X1_DISPPWD='\W'
+    [ -z "$TMUX" ] && x1_PWD "$PWD" || X1_DISPPWD='\W'
 
     #check if we're in an ssh session
     local host=''
     [ -n "$SSH_CLIENT" ] && host="$X1_COLG" || host="$X1_COLG0"
     host="$host\h$X1_ECOL"
 
-    # Build the PS1 
+    # Form the pwd color, user, & clock if needed
     local dispdir="$X1_COLB$X1_DISPPWD$X1_ECOL" # blue pwd
     local user="$condaenv$X1_COLG0@$X1_ECOL"
     if [ -z "$gitstat" ] && [ -z "$condaenv" ]; then
@@ -317,6 +319,7 @@ x1_get_PS1() {
     #echo "$user$host$gsep$time$gsep$dispdir\$$stat> "
 }
 PROMPT_COMMAND=x1_get_PS1
+
 
 #Run any command line args as a command for tmux
 "$@"
