@@ -44,8 +44,8 @@ X1_CMDCNT=0         # previous count
 X1_PRETIM=$SECONDS  # time tracker
 
 # User configurable settings, can set here to permanently
-# change settings, or can do `SETTING=false` after script
-# is sourced to temporarily turn off for that shell
+# change settings, or can do `SETTING=false` after script is
+# sourced to turn off for just that shell (not for colors)
 X1_COLORS=true      # set to false to turn off colors
 X1_TIMING=true      # set to false to turn off cmd timing
 X1_DELAY='20'       # minimum cmd time (in secs) to print
@@ -102,7 +102,7 @@ if $X1_TIMING; then
 fi
 
 tput colors &>/dev/null      # check for colors 
-if [ $? -eq 0 ]; then
+if [ $? -eq 0 ] && $X1_COLORS; then
     X1_COLG='\[\e[1;32m\]'   # green
     X1_COLG0='\[\e[0;32m\]'  # green unbold
     X1_COLY='\[\e[0;33m\]'   # yellow
@@ -318,3 +318,5 @@ x1_get_PS1() {
 }
 PROMPT_COMMAND=x1_get_PS1
 
+#Run any command line args as a command for tmux
+"$@"
