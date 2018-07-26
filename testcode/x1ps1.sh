@@ -79,8 +79,13 @@ if $X1_TIMING; then
 	    X1_SSHALERT=false
     fi; fi
 
-    notify-send &>/dev/null  # check if GUI alerts installed
-    [ $? -ne 1 ] && ! $X1_SSHALERT && X1_ALERTS=false
+    notify-send --version &>/dev/null  # check if GUI alerts installed
+    if [ $? -ne 0 ] && $X1_ALERTS; then
+	X1_ALERTS=false
+	if [ -z "$SSH_CLIENT" ]; then # don't care if in SSH session
+	    echo -n "bash command timing GUI alerts requested, "
+	    echo "but notify-send not installed."
+    fi; fi
 
     x1_preexec() {
 	# command to run before every 'simple' command, tracks cmd stats
@@ -158,12 +163,12 @@ x1_formTime(){
 	#  (i)python & shells (non-interactive),
         #  SECONDS= for testing
 	?(c)make?( *)|?(ba|da|z)sh@( *)|?(i)python@( *)|\
-	+([-a-zA-Z0-9_./()]).@(?(ba|z|c)sh|x|py)|\
+	+([-a-zA-Z0-9./!@#%()_+=]).@(?(ba|z|c)sh|x|py)|\
 	'SECONDS='*);;
 
 	# list for no GUI alerts & green color always
 	vi?(m)?( *)|nano?( *)|pico?( *)|gedit?( *)|emacs?( *)|\
-	ssh?( *)|tmux?( *)|less?( *)|man?( *)|bc?( *)|htop?( *)|\
+	ssh?( *)|tmux?( *)|less?( *)|man?( *)|bc?( *)|?(h)top?( *)|\
 	gdb?(-ia)?( *)|vimdiff?( *)|tail?( *)|gnuplot?( *))
 	    x1alertlvl=0
 	    x1col="$X1_COLG0";;
